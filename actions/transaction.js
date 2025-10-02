@@ -75,7 +75,7 @@ export async function createTransaction(data) {
         data: {
           ...data,
           userId: user.id,
-          nextRecurringDate:
+          nextRecurrence:
             data.isRecurring && data.recurringInterval
               ? calculateNextRecurringDate(data.date, data.recurringInterval)
               : null,
@@ -165,7 +165,7 @@ export async function updateTransaction(id, data) {
         },
         data: {
           ...data,
-          nextRecurringDate:
+          nextRecurrence:
             data.isRecurring && data.recurringInterval
               ? calculateNextRecurringDate(data.date, data.recurringInterval)
               : null,

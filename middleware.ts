@@ -1,24 +1,41 @@
+import arcjet, { createMiddleware, detectBot, shield } from "@arcjet/next";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/account", "/transaction"];
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/account(.*)",
+  "/transaction(.*)",
+]);
 
-function isProtected(pathname) {
-  return protectedRoutes.some((route) => pathname.startsWith(route));
-}
+const aj = arcjet({
+  key: process.env.ARCJET_KEY,
+  rules: [
+    shield({
+      mode: "LIVE",
+    }),
+    detectBot({
+      mode: "LIVE",
+      allow: [
+        "CATEGORY:SEARCH_ENGINE", 
+        "GO_HTTP", 
+      ],
+    }),
+  ],
+});
 
-export async function middleware(req) {
-  const { pathname } = req.nextUrl;
+const clerk = clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
 
-  // Simple auth check via cookie or header
-  const userId = req.cookies.get("__session")?.value;
-
-  if (!userId && isProtected(pathname)) {
-    const signInUrl = new URL("/sign-in", req.url);
-    return NextResponse.redirect(signInUrl);
+  if (!userId && isProtectedRoute(req)) {
+    const { redirectToSignIn } = await auth();
+    return redirectToSignIn();
   }
 
   return NextResponse.next();
-}
+});
+
+export default createMiddleware(aj, clerk);
 
 export const config = {
   matcher: [

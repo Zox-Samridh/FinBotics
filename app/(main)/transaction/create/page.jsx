@@ -1,57 +1,98 @@
-import { Suspense } from "react";
+"use client";
+
+export const dynamic = "force-dynamic";  // 🚀 Quick Fix
+
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { defaultCategories } from "@/data/categories";
+import { AddTransactionForm } from "../_components/transaction-form";
 import { getUserAccounts } from "@/actions/dashboard";
-import { getDashboardData } from "@/actions/dashboard";
-import { getCurrentBudget } from "@/actions/budget";
-import { AccountCard } from "@/app/(main)/dashboard/_components/account-card";
-import { CreateAccountDrawer } from "@/components/create-account-drawer";
-import { BudgetProgress } from "@/app/(main)/dashboard/_components/budget-progress";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus } from "lucide-react";
-import { DashboardOverview } from "@/app/(main)/dashboard/_components/transactions-overview";
+import { getTransaction } from "@/actions/transaction";
+import { Loader2 } from "lucide-react";
 
-export default async function DashboardPage() {
-  const [accounts, transactions] = await Promise.all([
-    getUserAccounts(),
-    getDashboardData(),
-  ]);
+function AddTransactionPage() {
+  const searchParams = useSearchParams();
+  const [accounts, setAccounts] = useState([]);
+  const [initialData, setInitialData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const defaultAccount = accounts?.find((account) => account.isDefault);
+  const editId = searchParams.get("edit");
 
-  // Get budget for default account
-  let budgetData = null;
-  if (defaultAccount) {
-    budgetData = await getCurrentBudget(defaultAccount.id);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const accountsRes = await getUserAccounts();
+        setAccounts(accountsRes || []);
+
+        if (editId) {
+          const transaction = await getTransaction(editId);
+          setInitialData(transaction);
+        }
+      } catch (err) {
+        setError(err.message || "Failed to load data");
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [editId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
+          <p className="text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Budget Progress */}
-      <BudgetProgress
-        initialBudget={budgetData?.budget}
-        currentExpenses={budgetData?.currentExpenses || 0}
-      />
-
-      {/* Dashboard Overview */}
-      <DashboardOverview
-        accounts={accounts}
-        transactions={transactions || []}
-      />
-
-      {/* Accounts Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <CreateAccountDrawer>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-dashed">
-            <CardContent className="flex flex-col items-center justify-center text-muted-foreground h-full pt-5">
-              <Plus className="h-10 w-10 mb-2" />
-              <p className="text-sm font-medium">Add New Account</p>
-            </CardContent>
-          </Card>
-        </CreateAccountDrawer>
-        {accounts.length > 0 &&
-          accounts?.map((account) => (
-            <AccountCard key={account.id} account={account} />
-          ))}
+    <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] py-8">
+      <div className="max-w-3xl mx-auto px-5">
+        <motion.div
+          className="flex justify-center md:justify-normal mb-12"
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+            {editId ? "Edit" : "Add"} Transaction
+          </h1>
+        </motion.div>
+        <AddTransactionForm
+          accounts={accounts}
+          categories={defaultCategories}
+          editMode={!!editId}
+          initialData={initialData}
+        />
       </div>
     </div>
   );
 }
+
+export default AddTransactionPage;
