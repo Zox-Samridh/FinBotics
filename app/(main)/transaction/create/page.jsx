@@ -1,14 +1,11 @@
 "use client";
 
-export const dynamic = "force-dynamic";  // 🚀 Quick Fix
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { defaultCategories } from "@/data/categories";
 import { AddTransactionForm } from "../_components/transaction-form";
-import { getUserAccounts } from "@/actions/dashboard";
-import { getTransaction } from "@/actions/transaction";
+import { getUserAccounts, getTransaction } from "@/actions/transaction";
 import { Loader2 } from "lucide-react";
 
 function AddTransactionPage() {
@@ -22,23 +19,29 @@ function AddTransactionPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+      setLoading(true);
+      setError(null);
 
-        const accountsRes = await getUserAccounts();
-        setAccounts(accountsRes || []);
-
-        if (editId) {
-          const transaction = await getTransaction(editId);
-          setInitialData(transaction);
-        }
-      } catch (err) {
-        setError(err.message || "Failed to load data");
-        console.error("Fetch error:", err);
-      } finally {
+      // Fetch user accounts
+      const accountsRes = await getUserAccounts();
+      if (!accountsRes.success) {
+        setError(accountsRes.error);
         setLoading(false);
+        return;
       }
+      setAccounts(accountsRes.data);
+
+      // Fetch transaction if editing
+      if (editId) {
+        const transactionRes = await getTransaction(editId);
+        if (!transactionRes.success) {
+          setError(transactionRes.error);
+        } else {
+          setInitialData(transactionRes.data);
+        }
+      }
+
+      setLoading(false);
     };
 
     fetchData();
@@ -84,6 +87,7 @@ function AddTransactionPage() {
             {editId ? "Edit" : "Add"} Transaction
           </h1>
         </motion.div>
+
         <AddTransactionForm
           accounts={accounts}
           categories={defaultCategories}
