@@ -1,18 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    images: {
-        remotePatterns: [
-            {
-                protocol: "https",
-                hostname: "randomuser.me",
-            },
-        ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "randomuser.me",
+      },
+    ],
+  },
+  experimental: {
+    serverActions: {
+      enabled: true, // Correct format for serverActions
     },
-    experimental:{
-        serverActions :{
-            bodySizeLimit : "5mb",
-        },
-    },
+    // Removed appDir since it's enabled by default in Next.js 15
+  },
 };
 
 export default nextConfig;

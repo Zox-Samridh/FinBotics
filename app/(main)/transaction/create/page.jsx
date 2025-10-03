@@ -1,8 +1,8 @@
 "use client";
 
-export const dynamic = "force-dynamic";  // 🚀 Quick Fix
+export const dynamic = "force-dynamic"; // ensures this page is always client-rendered
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { defaultCategories } from "@/data/categories";
@@ -11,14 +11,14 @@ import { getUserAccounts } from "@/actions/dashboard";
 import { getTransaction } from "@/actions/transaction";
 import { Loader2 } from "lucide-react";
 
-function AddTransactionPage() {
+function AddTransactionContent() {
   const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+
   const [accounts, setAccounts] = useState([]);
   const [initialData, setInitialData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const editId = searchParams.get("edit");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,20 +44,17 @@ function AddTransactionPage() {
     fetchData();
   }, [editId]);
 
-  if (loading) {
+  // Render loading / error states
+  if (loading)
     return (
       <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
-          <p className="text-gray-300">Loading...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
-      <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-[#282828] to-[#282828]">
         <div className="text-center">
           <p className="text-red-500 mb-4">{error}</p>
           <button
@@ -69,13 +66,12 @@ function AddTransactionPage() {
         </div>
       </div>
     );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] py-8">
+    <div className="min-h-screen py-8 bg-gradient-to-r from-[#282828] to-[#282828]">
       <div className="max-w-3xl mx-auto px-5">
         <motion.div
-          className="flex justify-center md:justify-normal mb-12"
+          className="flex justify-center md:justify-start mb-12"
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -84,6 +80,7 @@ function AddTransactionPage() {
             {editId ? "Edit" : "Add"} Transaction
           </h1>
         </motion.div>
+
         <AddTransactionForm
           accounts={accounts}
           categories={defaultCategories}
@@ -95,4 +92,16 @@ function AddTransactionPage() {
   );
 }
 
-export default AddTransactionPage;
+export default function AddTransactionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-r from-[#282828] to-[#282828] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        </div>
+      }
+    >
+      <AddTransactionContent />
+    </Suspense>
+  );
+}
